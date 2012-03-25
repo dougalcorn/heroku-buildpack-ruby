@@ -19,6 +19,9 @@ class LanguagePack::Ruby < LanguagePack::Base
   JVM_BASE_URL        = "http://heroku-jvm-langpack-java.s3.amazonaws.com"
   JVM_VERSION         = "openjdk7-latest"
 
+  VENDORED_LIBZMQ     = "http://vulcan-lpetre.herokuapp.com/output/03e1a880-0ddc-4478-9d4f-ed9b248ae65c"
+  VENDORED_UUID       = "http://vulcan-lpetre.herokuapp.com/output/e6b47a30-4832-4fe6-944e-9770af028d51"
+
   # detects if this is a valid Ruby app
   # @return [Boolean] true if it's a Ruby app
   def self.use?
@@ -51,9 +54,11 @@ class LanguagePack::Ruby < LanguagePack::Base
 
   def default_config_vars
     vars = {
-      "LANG"     => "en_US.UTF-8",
-      "PATH"     => default_path,
-      "GEM_PATH" => slug_vendor_base,
+      "LANG"            => "en_US.UTF-8",
+      "PATH"            => default_path,
+      "GEM_PATH"        => slug_vendor_base,
+      "LIBRARY_PATH"    => "/app/vendor/lib",
+      "LD_LIBRARY_PATH" => "/app/vendor/lib",
     }
 
     ruby_version_jruby? ? vars.merge("JAVA_OPTS" => default_java_opts, "JRUBY_OPTS" => default_jruby_opts) : vars
@@ -366,6 +371,19 @@ ERROR
       FileUtils.rm_rf("vendor/bundle")
     end
   end
+  
+  # install libzmq into the LP to be referenced for zmq gem compilation
+  # @param [String] tmpdir to store the libzmq files
+  def install_libzmq(dir)
+    FileUtils.mkdir_p dir
+    Dir.chdir(dir) do |dir|
+      run("curl #{VENDORED_LIBZMQ} -s -o - | tar xzf -")
+      run("curl #{VENDORED_UUID} -s -o - | tar xzf -")
+      ENV['LIBRARY_PATH'] = "#{dir}/lib:#{ENV['LIBRARY_PATH']}"
+      ENV['CPATH'] = "#{dir}/include:#{ENV['CPATH']}"
+      ENV['CPPATH'] = "#{dir}/include:#{ENV['CPPATH']}"
+    end
+  end
 
   # runs bundler to install the dependencies
   def build_bundler
@@ -394,6 +412,11 @@ ERROR
       topic("Installing dependencies using #{version}")
 
       load_bundler_cache
+
+      if gem_is_bundled?("zmq")
+         puts "zmq detected, installing vendored libzmq"
+         install_libzmq(File.expand_path("vendor"))
+      end
 
       bundler_output = ""
       Dir.mktmpdir("libyaml-") do |tmpdir|
