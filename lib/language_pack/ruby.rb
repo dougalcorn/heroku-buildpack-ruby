@@ -413,7 +413,6 @@ ERROR
 
       load_bundler_cache
 
-      if gem_is_bundled?("zmq")
       if gem_is_bundled?("zmq") || gem_is_bundled?("ffi-rzmq")
          puts "zmq detected, installing vendored libzmq"
          install_libzmq(File.expand_path("vendor"))
