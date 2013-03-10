@@ -8,6 +8,7 @@ class LanguagePack::Rails3 < LanguagePack::Rails2
   def self.use?
     if gemfile_lock?
       rails_version = LanguagePack::Ruby.gem_version('railties')
+      puts "found railties version: #{rails_version}"
       rails_version >= Gem::Version.new('3.0.0') && rails_version < Gem::Version.new('4.0.0') if rails_version
     end
   end

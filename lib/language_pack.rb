@@ -10,7 +10,9 @@ module LanguagePack
     Dir.chdir(args.first)
 
     pack = [ NoLockfile, Rails4, Rails3, Rails2, Rack, Ruby ].detect do |klass|
-      klass.use?
+      use = klass.use?
+      puts "Use #{klass}?: #{use}"
+      use
     end
 
     pack ? pack.new(*args) : nil
